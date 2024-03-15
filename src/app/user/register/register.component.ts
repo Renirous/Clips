@@ -77,6 +77,8 @@ export class RegisterComponent {
 
         try{
            await this.auth.crateUser(this.registerForm.value as IUser)
+           this.alertMsg = "User registerd succesfully"
+           this.alertColor = 'green'
         }catch(e){
             console.log(e)
             
@@ -86,8 +88,7 @@ export class RegisterComponent {
             return
         }
 
-        this.alertMsg = "User registerd succesfully"
-        this.alertColor = 'green'
+
     }
 
 }

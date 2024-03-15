@@ -2,12 +2,13 @@ import { Component, OnDestroy } from '@angular/core';
 import { FormGroup, FormControl, Validator, Validators } from '@angular/forms';
 import { v4 as uuid } from 'uuid';
 import { AngularFireStorage, AngularFireUploadTask } from '@angular/fire/compat/storage';
-import { last, switchMap } from 'rxjs';
+import { combineLatest, forkJoin, last, switchMap } from 'rxjs';
 import { AngularFireAuth } from '@angular/fire/compat/auth';
 import firebase from 'firebase/compat/app'
 import { ClipService } from 'src/app/services/clip.service';
 import IClip from 'src/app/models/clip.model';
 import { Router } from '@angular/router';
+import { FfmpegService } from 'src/app/services/ffmpeg.service';
 
 @Component({
   selector: 'app-upload',
@@ -30,7 +31,11 @@ export class UploadComponent implements OnDestroy{
   alertMsg = 'Please wait! Your clip is being uploaded.'
   alertColor = 'blue'
 
+  screenshots : string[] = []
+  selectedScreenshot :string = ''
+
   task? : AngularFireUploadTask
+  screenshotTask? :AngularFireUploadTask
 
   user : firebase.User | null = null
 
@@ -48,16 +53,21 @@ export class UploadComponent implements OnDestroy{
     private storeage : AngularFireStorage,
     private auth : AngularFireAuth,
     private clip : ClipService,
-    private router : Router
+    private router : Router,
+    public ffmpegService : FfmpegService
   ){
     this.auth.user.subscribe( user => this.user = user)
+    this.ffmpegService.init()
   }
 
   ngOnDestroy(): void {
       this.task?.cancel()
   }
 
-  storeFile($event :Event){
+  async storeFile($event :Event){
+    if(this.ffmpegService.isRunning){
+      return
+    }
     this.isDragover = false
 
     this.file =  ($event as DragEvent).dataTransfer?
@@ -68,13 +78,16 @@ export class UploadComponent implements OnDestroy{
       return
     }
 
+    this.screenshots = await this.ffmpegService.getScreenshots(this.file)
+    this.selectedScreenshot = this.screenshots[0]
+
     this.title.setValue(this.file.name.replace(/\.[^/.]+$/,''))
 
     this.showNextSteps = true
   }
 
 
-  uploadFile(){
+  async uploadFile(){
     this.uploadForm.disable()
     this.isSubmitting = true
     this.showAlert = true
@@ -89,25 +102,47 @@ export class UploadComponent implements OnDestroy{
    this.task =  this.storeage.upload(clipFilePath, this.file)
    const clipRef = this.storeage.ref(clipFilePath)
 
-   this.task.percentageChanges().subscribe((percentage)=>{
-     this.percentage = percentage as number / 100
+   const screenshotBlob  = await this.ffmpegService.blobFormURL(this.selectedScreenshot)
+   const screenshotPath = `screenshots/${clipFileName}.png`
+   this.screenshotTask = this.storeage.upload(screenshotPath, screenshotBlob)
+   const screenshotRef = this.storeage.ref(screenshotPath)
+
+   combineLatest([ 
+    this.task.percentageChanges(),
+    this.screenshotTask.percentageChanges()
+  ]).subscribe((percentage)=>{
+    const [taskPrcentage, screenshotPercentage] = percentage
+    if(!taskPrcentage || !screenshotPercentage){
+      return
+    }
+
+    const total = taskPrcentage + screenshotPercentage
+     this.percentage = total as number / 200
    })
 
-   this.task.snapshotChanges().pipe(
-    last(),
-    switchMap(()=>clipRef.getDownloadURL())
+   forkJoin([
+    this.task.snapshotChanges(),
+    this.screenshotTask.snapshotChanges()
+  ]).pipe(
+    switchMap(()=>forkJoin([
+      clipRef.getDownloadURL(),
+      screenshotRef.getDownloadURL()
+    ]))
    ).subscribe({
     next : async (url)=>{
-      const data = {
+      const [clipURL, screenshotURL] = url
+      const clip = {
         uid : this.user?.uid as string,
         displayName : this.user?.displayName as string,
         title : this.title.value,
         fileName : `${clipFileName}.mp4`,
-        url : url,
+        url : clipURL,
+        screenshotURL : screenshotURL,
+        screenshotName : `${clipFileName}.png`,
         timeStamp : firebase.firestore.FieldValue.serverTimestamp()
       }
 
-      const clipDocRef = await this.clip.createClip(data as IClip)
+      const clipDocRef = await this.clip.createClip(clip as IClip)
       
       this.alertMsg = 'Success! Your clip is noe ready to share with world'
       this.alertColor = 'green'

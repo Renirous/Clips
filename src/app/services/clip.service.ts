@@ -11,6 +11,8 @@ import { AngularFireStorage } from '@angular/fire/compat/storage';
 export class ClipService {
 
   private clipsCollection : AngularFirestoreCollection<IClip>
+  public clipsList : IClip[] = []
+  private panddingRequest : boolean = false
 
   constructor(
     private db : AngularFirestore,
@@ -54,9 +56,40 @@ export class ClipService {
 
   public async deleteClip(clip :IClip){
     const clipRef = this.storage.ref(`clips/${clip.fileName}`)
-    await clipRef.delete()
+    clipRef.delete()
+
+    const screenshotRef = this.storage.ref(`screenshots/${clip.screenshotName}`)
+    screenshotRef.delete()
 
     await this.clipsCollection.doc(clip.docId).delete()
     
+  }
+
+  public async getClips(){
+    if(this.panddingRequest){
+      return
+    }
+
+    this.panddingRequest = true
+    let query = this.clipsCollection.ref.orderBy('timeStamp', 'desc').limit(6)
+
+    if(this.clipsList.length != 0){
+      console.log("after")
+      const lastDocID = this.clipsList[this.clipsList.length - 1].docId
+      const lastDoc = await this.clipsCollection.ref.doc(lastDocID).get()
+
+      query = query.startAfter(lastDoc)
+    }
+
+    const snapshot = await query.get()
+
+    snapshot.forEach((doc)=>{
+      this.clipsList.push({
+        docId : doc.id,
+        ...doc.data()
+      })
+    })
+
+    this.panddingRequest =false
   }
 }
