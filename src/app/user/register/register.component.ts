@@ -1,5 +1,9 @@
 import { Component } from '@angular/core';
 import { FormGroup, FormControl, Validators } from '@angular/forms'
+import IUser from 'src/app/models/user.model';
+import { AuthService } from 'src/app/services/auth.service';
+import { RegisterValidator } from '../validator/register-validator';
+import { EmailTaken } from '../validator/email-taken';
 
 @Component({
     selector: 'app-register',
@@ -8,10 +12,16 @@ import { FormGroup, FormControl, Validators } from '@angular/forms'
 })
 export class RegisterComponent {
 
+    constructor(
+        private auth : AuthService,
+        private emailTaken : EmailTaken
+        ){}
+
+    isSubmitting : boolean = false
+
     showAlert = false;
     alertMsg = "Please wait! Your account is creating."
     alertColor = 'blue'
-
 
     name = new FormControl('',
         [
@@ -23,8 +33,8 @@ export class RegisterComponent {
         [
             Validators.required,
             Validators.email
-        ])
-    age = new FormControl('',
+        ],[this.emailTaken.validate])
+    age = new FormControl<number | null>(null,
         [
             Validators.required,
             Validators.min(18),
@@ -53,12 +63,31 @@ export class RegisterComponent {
         password: this.password,
         confirm_password: this.confirm_password,
         phoneNumber: this.phoneNumber
-    })
+    }, [RegisterValidator.match('password', 'confirm_password')])
 
-    register(){
+    async register(){
+        this.isSubmitting = true
+
         this.showAlert = true;
         this.alertMsg = "Please wait! Your account is creating."
         this.alertColor = 'blue'
+
+
+        const {email , password}  = this.registerForm.value
+
+        try{
+           await this.auth.crateUser(this.registerForm.value as IUser)
+        }catch(e){
+            console.log(e)
+            
+            this.alertMsg = "An unexpected error occured. Please try again latter."
+            this.alertColor = 'red'
+            this.isSubmitting = false
+            return
+        }
+
+        this.alertMsg = "User registerd succesfully"
+        this.alertColor = 'green'
     }
 
 }
