@@ -3,16 +3,16 @@ import { Injectable } from '@angular/core';
 @Injectable({
   providedIn: 'root'
 })
-export class ModelService {
+export class ModalService {
   private visible = false;
 
   constructor() { }
 
-  isModelOpen (){
+  ismodalOpen (){
     return this.visible
   }
 
-  toggeleModel(){
+  toggelemodal(){
     this.visible = !this.visible;
   }
 }

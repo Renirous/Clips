@@ -1,24 +1,24 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AuthModelComponent } from './auth-model/auth-model.component';
+import { AuthModalComponent } from './auth-modal/auth-modal.component';
 import { SharedModule } from '../shared/shared.module'; 
-// import { ModelService } from '../services/model.service';
+// import { modalService } from '../services/modal.service';
 
 
 
 @NgModule({
   declarations: [
-    AuthModelComponent
+    AuthModalComponent
   ],
   imports: [
     CommonModule,
     SharedModule
   ],
   exports:[
-    AuthModelComponent
+    AuthModalComponent
   ],
   // providers:[
-  //   ModelService
+  //   modalService
   // ]
 })
 export class UserModule { }

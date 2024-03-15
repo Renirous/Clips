@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { ModelService } from '../services/model.service';
+import { ModalService } from '../services/modal.service';
 
 @Component({
   selector: 'app-nav',
@@ -8,10 +8,10 @@ import { ModelService } from '../services/model.service';
 })
 export class NavComponent {
 
-  constructor(public model : ModelService){}
+  constructor(public modal : ModalService){}
 
-    openModel($event : Event){
+    openModal($event : Event){
       $event.preventDefault();
-      this.model.toggeleModel();
+      this.modal.toggelemodal();
     }
 }
