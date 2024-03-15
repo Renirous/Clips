@@ -22,7 +22,12 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              {
+                "input": "node_modules/@ffmpeg/core/dist/esm",
+                "output": "node_modules/@ffmpeg/core/dist/esm",
+                "glob": "*"
+              }
             ],
             "styles": [
               "src/styles.css"
@@ -60,7 +65,8 @@
               ]
             }
           },
-          "defaultConfiguration": "production"
+          "defaultConfiguration": "production",
+     
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
@@ -72,7 +78,13 @@
               "browserTarget": "Clips:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options" : {
+            "headers" : {
+              "Cross-Origin-Openar-Policy" : "same-origin",
+              "Cross-Origin-Embedder-Policy" : "require-corp"
+            }
+          }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
